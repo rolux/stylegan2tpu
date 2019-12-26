@@ -12,6 +12,7 @@ import numpy as np
 import tensorflow as tf
 import dnnlib
 import dnnlib.tflib as tflib
+import tfex
 
 #----------------------------------------------------------------------------
 # Dataset class that loads data from tfrecords files.
@@ -95,7 +96,7 @@ class TFRecordDataset:
         self.label_dtype = self._np_labels.dtype.name
 
         # Build TF expressions.
-        with tf.name_scope('Dataset'), tf.device('/cpu:0'):
+        with tf.name_scope('Dataset'), tfex.device('/cpu:0'):
             self._tf_minibatch_in = tf.placeholder(tf.int64, name='minibatch_in', shape=[])
             self._tf_labels_var = tflib.create_var_with_large_initial_value(self._np_labels, name='labels_var')
             self._tf_labels_dataset = tf.data.Dataset.from_tensor_slices(self._tf_labels_var)
@@ -147,7 +148,7 @@ class TFRecordDataset:
     def get_random_labels_tf(self, minibatch_size): # => labels
         with tf.name_scope('Dataset'):
             if self.label_size > 0:
-                with tf.device('/cpu:0'):
+                with tfex.device('/cpu:0'):
                     return tf.gather(self._tf_labels_var, tf.random_uniform([minibatch_size], 0, self._np_labels.shape[0], dtype=tf.int32))
             return tf.zeros([minibatch_size, 0], self.label_dtype)
 

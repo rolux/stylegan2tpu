@@ -151,8 +151,14 @@ def create_session(config_dict: dict = None, force_as_default: bool = False) -> 
                 obj = getattr(obj, field)
             setattr(obj, fields[-1], value)
 
+    import os
+    tpu_address = ''
+    if 'COLAB_TPU_ADDR' in os.environ:
+      tpu_address = 'grpc://' + os.environ['COLAB_TPU_ADDR']
+      print('using TPU at %s' % tpu_address)
+
     # Create session.
-    session = tf.Session(config=config_proto)
+    session = tf.Session(target=tpu_address, config=config_proto)
     if force_as_default:
         # pylint: disable=protected-access
         session._default_session = session.as_default()

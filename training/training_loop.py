@@ -11,6 +11,7 @@ import tensorflow as tf
 import dnnlib
 import dnnlib.tflib as tflib
 from dnnlib.tflib.autosummary import autosummary
+import tfex
 
 from training import dataset
 from training import misc
@@ -143,7 +144,7 @@ def training_loop(
     misc.save_image_grid(grid_reals, dnnlib.make_run_dir_path('reals.png'), drange=training_set.dynamic_range, grid_size=grid_size)
 
     # Construct or load networks.
-    with tf.device('/gpu:0'):
+    with tfex.device('/gpu:0'):
         if resume_pkl is None or resume_with_new_nets:
             print('Constructing networks...')
             G = tflib.Network('G', num_channels=training_set.shape[0], resolution=training_set.shape[1], label_size=training_set.label_size, **G_args)
@@ -164,7 +165,7 @@ def training_loop(
 
     # Setup training inputs.
     print('Building TensorFlow graph...')
-    with tf.name_scope('Inputs'), tf.device('/cpu:0'):
+    with tf.name_scope('Inputs'), tfex.device('/cpu:0'):
         lod_in               = tf.placeholder(tf.float32, name='lod_in', shape=[])
         lrate_in             = tf.placeholder(tf.float32, name='lrate_in', shape=[])
         minibatch_size_in    = tf.placeholder(tf.int32, name='minibatch_size_in', shape=[])
@@ -191,7 +192,7 @@ def training_loop(
     # Build training graph for each GPU.
     data_fetch_ops = []
     for gpu in range(num_gpus):
-        with tf.name_scope('GPU%d' % gpu), tf.device('/gpu:%d' % gpu):
+        with tf.name_scope('GPU%d' % gpu), tfex.device('/gpu:%d' % gpu):
 
             # Create GPU-specific shadow copies of G and D.
             G_gpu = G if gpu == 0 else G.clone(G.name + '_shadow')
@@ -240,7 +241,7 @@ def training_loop(
     Gs_update_op = Gs.setup_as_moving_average_of(G, beta=Gs_beta)
 
     # Finalize graph.
-    with tf.device('/gpu:0'):
+    with tfex.device('/gpu:0'):
         try:
             peak_gpu_mem_op = tf.contrib.memory_stats.MaxBytesInUse()
         except tf.errors.NotFoundError:

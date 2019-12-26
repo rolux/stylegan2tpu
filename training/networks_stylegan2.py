@@ -16,6 +16,9 @@ from dnnlib.tflib.ops.fused_bias_act import fused_bias_act
 # NOTE: Do not import any application-specific modules here!
 # Specify all network parameters as kwargs.
 
+def _i(x): return tf.transpose(x, [0,2,3,1])
+def _o(x): return tf.transpose(x, [0,3,1,2])
+
 #----------------------------------------------------------------------------
 # Get/create weight tensor for a convolution or fully-connected layer.
 
@@ -53,11 +56,11 @@ def conv2d_layer(x, fmaps, kernel, up=False, down=False, resample_kernel=None, g
     assert kernel >= 1 and kernel % 2 == 1
     w = get_weight([kernel, kernel, x.shape[1].value, fmaps], gain=gain, use_wscale=use_wscale, lrmul=lrmul, weight_var=weight_var)
     if up:
-        x = upsample_conv_2d(x, tf.cast(w, x.dtype), data_format='NCHW', k=resample_kernel)
+        x = _o(upsample_conv_2d(_i(x), tf.cast(w, x.dtype), data_format='NHWC', k=resample_kernel))
     elif down:
-        x = conv_downsample_2d(x, tf.cast(w, x.dtype), data_format='NCHW', k=resample_kernel)
+        x = _o(conv_downsample_2d(_i(x), tf.cast(w, x.dtype), data_format='NHWC', k=resample_kernel))
     else:
-        x = tf.nn.conv2d(x, tf.cast(w, x.dtype), data_format='NCHW', strides=[1,1,1,1], padding='SAME')
+        x = _o(tf.nn.conv2d(_i(x), tf.cast(w, x.dtype), data_format='NHWC', strides=[1,1,1,1], padding='SAME'))
     return x
 
 #----------------------------------------------------------------------------
@@ -113,11 +116,11 @@ def modulated_conv2d_layer(x, y, fmaps, kernel, up=False, down=False, demodulate
 
     # Convolution with optional up/downsampling.
     if up:
-        x = upsample_conv_2d(x, tf.cast(w, x.dtype), data_format='NCHW', k=resample_kernel)
+        x = _o(upsample_conv_2d(_i(x), tf.cast(w, x.dtype), data_format='NHWC', k=resample_kernel))
     elif down:
-        x = conv_downsample_2d(x, tf.cast(w, x.dtype), data_format='NCHW', k=resample_kernel)
+        x = _o(conv_downsample_2d(_i(x), tf.cast(w, x.dtype), data_format='NHWC', k=resample_kernel))
     else:
-        x = tf.nn.conv2d(x, tf.cast(w, x.dtype), data_format='NCHW', strides=[1,1,1,1], padding='SAME')
+        x = _o(tf.nn.conv2d(_i(x), tf.cast(w, x.dtype), data_format='NHWC', strides=[1,1,1,1], padding='SAME'))
 
     # Reshape/scale output.
     if fused_modconv:
